@@ -1,0 +1,669 @@
+#Requires AutoHotkey v2
+
+myGui := Gui()
+;imagePath :=  A_ScriptDir "\Images\Snowy\Other\map3.png"
+CoordMode("Mouse", "Window")
+;CoordMode("Mouse", "Screen")
+;TabControl := myGui.Add("Tab3", "x8 y0 w668 h408", ["Main Menu", "Unit Config"])
+TabControl := myGui.Add("Tab3", "x8 y0 w668 h408", ["Unit Config"])
+TabControl.UseTab(1)
+
+;Snowy Images
+snowyWavePath := "*75 " A_ScriptDir "\Images\Snowy\Waves\wave"
+snowyWave1 := "*75 " A_ScriptDir "\Images\Snowy\Waves\wave1zoom.png"
+snowyMap := A_ScriptDir "\Images\Snowy\Other\map3.png"
+
+;Leaf Images
+leafWavePath1 := "*75 " A_ScriptDir "\Images\Leaf\Waves\spawn1\wave"
+leafWavePath2 := "*75 " A_ScriptDir "\Images\Leaf\Waves\spawn2\wave"
+leafWavePath1totem := "*75 " A_ScriptDir "\Images\Leaf\Waves\totemspawn1\wave"
+leafWavePath2totem := "*75 " A_ScriptDir "\Images\Leaf\Waves\totemspawn2\wave"
+leafWave2 := "*75 " A_ScriptDir "\Images\Leaf\Waves\spawn2\rockspawn2.png"
+leafWave1 := "*75 " A_ScriptDir "\Images\Leaf\Waves\spawn1\rockspawn1.png"
+leafWaveStart := "*75 " A_ScriptDir "\Images\Leaf\Waves\spawn1\wave1.png"
+leafMap1 := A_ScriptDir "\Images\Leaf\Waves\spawn1\spawn1map.png"
+leafMap2 := A_ScriptDir "\Images\Leaf\Waves\spawn2\spawn2map.png"
+
+;Misc
+Upgrade := "*75 " A_ScriptDir "\Images\Other\Upgrade.png"
+Reconnect := "*75 " A_ScriptDir "\Images\Other\Reconnect.png"
+Retry := "*75 " A_ScriptDir "\Images\Other\Retry.png"
+customMap := A_ScriptDir "\Images\Other\customMap.png"
+testImageSearch := A_ScriptDir "\Images\Other\testImageSearch.png"
+testImageSearchPicture := "*75 " A_ScriptDir "\Images\Other\testImageSearch.png"
+;Misc
+
+;Raid Move
+raidMovePath := "*75 " A_ScriptDir "\Images\RaidMove\step"
+step2perm := "*75 " A_ScriptDir "\Images\RaidMove\step2.png"
+
+global UnitData := []
+
+AddUnitGroup(guiName, index, x, y) {
+    unit := {}
+    guiName.Add("GroupBox", Format("x{} y{} w209 h265", x, y), Format("Unit {}", index))
+    unit.Enabled := guiName.Add("CheckBox", Format("x{} y{} w120 h23", x+8, y+24), "Enabled")
+    unit.Slot := guiName.Add("Edit", Format("x{} y{} w15 h21 Limit Number", x+55, y+48))
+    unit.MainUpgrade := guiName.Add("CheckBox", Format("x{} y{} w63", x+104, y+149))
+    unit.Wave := guiName.Add("Edit", Format("x{} y{} w20 h21 Limit Number", x+48, y+80))
+    unit.Wait := guiName.Add("Edit", Format("x{} y{} w35 h21 Limit Number", x+56, y+112))
+    unit.X := guiName.Add("Edit", Format("x{} y{} w28 h21 Limit Number", x+24, y+203))
+    unit.Y := guiName.Add("Edit", Format("x{} y{} w28 h21 Limit Number", x+80, y+203))
+    unit.Xleaf2 := guiName.Add("Edit", Format("x{} y{} w28 h21 Limit Number", x+24, y+233))
+    unit.Yleaf2 := guiName.Add("Edit", Format("x{} y{} w28 h21 Limit Number", x+80, y+233))
+    unit.leaf2textX := guiName.Add("Text", Format("x{} y{} w10 h20 +0x200", x+8, y+233), "X:") ; LEAF 2
+    unit.leaf2textY := guiName.Add("Text", Format("x{} y{} w10 h20 +0x200", x+64, y+233), "Y:") ; LEAF 2
+    
+    guiName.Add("Text", Format("x{} y{} w43 h26 +0x200", x+8, y+112), "Wait(s):")
+    guiName.Add("Text", Format("x{} y{} w45 h20 +0x200", x+8, y+48), "Unit Slot:")
+    guiName.Add("Text", Format("x{} y{} w36 h23 +0x200", x+8, y+80), "Wave:")
+    guiName.Add("Text", Format("x{} y{} w93 h23 +0x200", x+8, y+144), "Main Upgrade Unit:")
+    guiName.Add("Text", Format("x{} y{} w63 h23 +0x200", x+8, y+170), "Coordinates:")
+    guiName.Add("Text", Format("x{} y{} w10 h20 +0x200", x+8, y+203), "X:")
+    guiName.Add("Text", Format("x{} y{} w10 h20 +0x200", x+64, y+203), "Y:")
+    
+    unit.OpenMap := guiName.Add("Button", Format("x{} y{} w80 h23", x+120, y+202), "Open Map")
+    unit.OpenMap2 := guiName.Add("Button", Format("x{} y{} w80 h23", x+120, y+232), "Open Map 2")
+    unit.OpenMap.OnEvent("Click", (*) => OpenMap(index, 1))
+    unit.OpenMap2.OnEvent("Click", (*) => OpenMap(index, 2))
+
+    UnitData.Push(unit)
+}
+
+AddUnitGroup(myGui, 1, 16, 32)
+AddUnitGroup(myGui, 2, 232, 32)
+AddUnitGroup(myGui, 3, 448, 32)
+
+totemBox := myGui.Add("GroupBox", "x180 y350 w110 h50", "Totem")
+totemText := myGui.Add("CheckBox", "x185 y373 w100 h13", "Totems Enabled")
+
+ToggleLeaf2Visibility(1)
+ToggleLeaf2Visibility(2)
+ToggleLeaf2Visibility(3)
+
+ToggleLeaf2Visibility(unitIndex, visible := false) {
+    unit := UnitData[unitIndex]
+    unit.leaf2textX.Visible := visible
+    unit.leaf2textY.Visible := visible
+    unit.Xleaf2.Visible := visible
+    unit.Yleaf2.Visible := visible 
+    unit.OpenMap2.Visible := visible
+    totemText.Visible := visible
+    totemBox.Visible := visible
+}
+
+myGui.OnEvent('Close', (*) => ExitApp())
+myGui.Title := "Informaal's Macro v0.0.3"
+
+controlsBox := myGui.Add("GroupBox", "x15 y350 w155 h50", "Controls")
+startButton := myGui.Add("Button", "x22 y370 w50 h20", "F1 - Start")
+endButton := myGui.Add("Button", "x82 y370 w80 h20", "F3 - Exit Macro")
+startButton.OnEvent("Click", ShowMessage)
+endButton.OnEvent("Click", ShowMessage)
+
+
+selectRaidBox := myGui.Add("GroupBox", "x16 y300 w80 h50", "Select Raid")
+selectRaid := myGui.Add("DropDownList", "x22 y320 w65 h80", ["Snowy", "Leaf", "Custom"]) ;Snowy = 1, Leaf = 2, Custom = 3
+selectRaid.OnEvent("Change", (*) => toggleVis())
+
+windowBox := myGui.Add("GroupBox", "x105 y300 w80 h50", "Set Window")
+setWindow := myGui.Add("Button", "x110 y320 w70 h23", "Activate")
+setWindow.OnEvent("Click", setWindowID)
+
+windowSize := myGui.Add("GroupBox", "x195 y300 w80 h50", "Window Size")
+setWindow := myGui.Add("Button", "x200 y320 w70 h23", "Force Size")
+setWindow.OnEvent("Click", forceSize)
+
+debugWindow := myGui.Add("GroupBox", "x285 y300 w80 h50", "Debugging")
+debugButton := myGui.Add("Button", "x290 y320 w70 h23", "Open Debug") 
+debugButton.OnEvent("Click", setupDebugGui)
+
+currentProcessGroup := myGui.Add("GroupBox", "x575 y300 w80 h50", "Current Process")
+currentProcess := myGui.Add("Text", "x580 y320 w50 h23", "Idle") 
+
+HelpButton := myGui.Add("Button", "x621 y355", "Help")
+HelpButton.OnEvent("Click", DisplayHelp)
+myGui.Show("w726 h424")
+
+global getWindowID := 0
+global winID := 0
+
+ShowMessage(*) {
+    MsgBox("This button has no functionality. Press the button on your keyboard!")
+}
+
+setWindowID(*) {
+    global getWindowID := 1
+    MsgBox("Right click your Roblox Window", "Set Window ID")
+}
+
+setupDebugGui(*) {
+    newGui := Gui()
+    newGui.Show("w150 h50")
+    moveButton := newGui.Add("Button", "x5 y5 w50 h30", "Move Mouse")
+    moveButton.OnEvent("Click", moveTheMouse)
+    imageButton := newGui.Add("Button", "x65 y5 w50 h30", "Image Test")
+    imageButton.OnEvent("Click", testImage)
+    moveTheMouse(*) {
+        MouseMove(100, 100, 5, "R")
+        Sleep(1000)
+        MsgBox("Your mouse has been moved. If it did not move, you most likely have Valorant/Riot Client/Vanguard open someone on your computer. These need to be closed.")
+    }
+    testImage(*) {
+        testImageGUI := Gui()
+        testImageGUI.Add("Picture", "", testImageSearch)
+        testImageGUI.Title := "Informaal's Macro Image Test"
+        testImageGUI.Show()
+        Sleep(1000)
+        if(ImageSearchFunction(testImageSearchPicture)) {
+            MsgBox("Successfully found the picture. This does not mean that it will work in game, but is a good place to start for debugging.")
+        } else {
+            MsgBox("Picture not found.")
+        }
+        Sleep(1000)
+        if(winExist("Informaal's Macro Image Test")) {
+            WinClose("Informaal's Macro Image Test")
+        }
+    }
+}
+
+forceSize(*) {
+    global sizeError .= ""
+    WinActivate("ahk_id " winID)
+    WinMove((A_ScreenWidth / 4.2), (A_ScreenHeight / 4.2), 816, 638, "A")
+    WinGetPos(&X, &Y, &OutWidth, &OutHeight, "A")
+    sizeError .= "You have set your screen size to W: " OutWidth " H:" OutHeight
+    if(OutWidth != 816 || OutHeight != 638) {
+        sizeError .= "This does not match the given X and Y. Your macro will most likely not work."
+    } else {
+        sizeError.= "`nThis matches the given X and Y. Your macro should work."
+    }
+    MsgBox(sizeError)
+}
+
+#HotIf getWindowID = 1
+RButton:: {
+    MouseGetPos(,,&id)
+    global winID := id
+    MsgBox(id)
+    if(winExist("Set Window ID")) {
+        WinClose("Set Window ID")
+    }
+    global getWindowID := 0
+}
+#HotIf
+
+toggleVis() {
+    for index, unit in UnitData {
+        if(selectRaid.Value = 2) {
+            ToggleLeaf2Visibility(index, true)
+        } else {
+            ToggleLeaf2Visibility(index, false)
+        }
+    }
+}
+
+
+;TabControl.UseTab(1)
+;myGui.Add("GroupBox", Format("w209 h260"))
+;Select raid value
+DisplayHelp(*) {
+    HeaderHelp := "[Unit Config Information]`n"
+    CheckBoxHelp := "`nEnabled Checkbox: If you want to use an additional unit, Enable this slot by checking the box`n"
+    PlacementHelp := "`nPlacement: Select if your unit needs to be placed on the Ground or a Hill`n"
+    WaveHelp := "`nWave: Input the wave that you want your unit to be placed on (1-15). With no delay, it will place as soon as the Selected Wave starts.`n"
+    WaitHelp := "`nWait: Insert a delay (in seconds) to place your unit X seconds after your selected wave starts.`n"
+    MainUpgradeHelp := "`nMain Upgrade Unit: If you select 'Yes' then the macro will spam upgrade this unit after all other units have been placed.`n"
+    MapHelp := "`nOpen Map: Clicking this Button will Open a map of the raid. 'RIGHT CLICK' where you want to place your unit. Snowy is a **VERY** bad map for air placement units with this configuration, so keep your placement within the green box. Units (along with other areas) cannot be placed within the red zone.`n"
+    CoordinateHelp := "`nCooridnates/XY: This will be where your unit is placed on the map. A Higher Y value will move the unit *down* on the screen, and a Higher X value will move the unit to the right. Top Left is (0,0)`n"
+    UnitSlotHelp := "`nUnit Slot: This should be the slot that your unit is in (1-6)`n"
+    AdditionalHelp := "`nFor Additional Help, join the Discord -> discord.gg/XrZfsFysj8`n"
+    MsgBox(HeaderHelp . CheckBoxHelp . PlacementHelp . WaveHelp . WaitHelp . MainUpgradeHelp . MapHelp . CoordinateHelp . UnitSlotHelp . AdditionalHelp)
+}
+
+global recieivingCoords := 0, UnitNum := 0, mapNum := 0, leafySpawn := 0
+
+OpenMap(Unit, mapUse) {
+    global recieivingCoords, UnitNum, mapGui, UnitData, mapNum
+    recieivingCoords := 1
+    UnitNum := Unit
+    mapGui := Gui()
+
+    if(selectRaid.Value = 1) { ;snowy
+        mapGui.Add("Picture", "", snowyMap)
+    } else if(selectRaid.Value = 2) { ;leaf
+        if(mapUse = 1) {
+            mapGui.Add("Picture", "", leafMap1)
+        } else if(mapUse = 2) {
+            mapGui.Add("Picture", "", leafMap2)
+            mapNum := 2
+        }
+    } else if(selectRaid.Value = 0) { ;none
+        MsgBox("NO MAP SELECTED!")
+        return
+    } else if(selectRaid.Value = 3) { ;custom
+        MsgBox("`n[CAUTION, USING CUSTOM MAP FEATURE]`n`nTo use this feature, put your roblox window inside of this box. It will not auto reconnect/path to it for you, only place the units at the positon and retry.")
+        mapGui.Add("Picture", "", customMap)
+    }
+    mapGui.Show()
+    mapGui.Title := "Coordinates for Unit " UnitNum " // RIGHT CLICK TO SET COORDINATES!"
+
+    mapGui.OnEvent("Close", (*) => recieivingCoords := 0)
+}
+
+#HotIf recieivingCoords = 1
+Rbutton:: {
+    MouseGetPos(&x, &y)
+    UpdateCoords(UnitNum, x, y)
+}
+#HotIf
+
+UpdateCoords(UnitNum, x, y) {
+    global recieivingCoords, mapGui, UnitData, mapNum
+    unit := UnitData[UnitNum]
+    if(mapNum = 0) {
+        unit.X.Value := x-10
+        unit.Y.Value := y-5 ;Offsets for Map -> Game
+        Result := MsgBox(Format("Unit {} Pos Set to X: {} Y: {}", UnitNum, unit.X.Value, unit.Y.Value), "Coordinates for Unit " UnitNum)
+    } else if (mapNum = 2) {
+        unit.Xleaf2.Value := x-10
+        unit.Yleaf2.Value := y-5 ;Offsets for Map -> Game
+        Result := MsgBox(Format("Unit {} Pos Set to X: {} Y: {}", UnitNum, unit.Xleaf2.Value , unit.Yleaf2.Value), "Coordinates for Unit " UnitNum)
+        mapNum := 0
+    }
+    if (Result = "OK") {
+        mapGui.Destroy()
+        recieivingCoords := 0
+    }
+}
+
+ImageSearchFunction(imagePath) {
+    CoordMode("Pixel", "Screen")
+    global FoundX, FoundY
+    WinGetPos(&X, &Y, &W, &H, "A")
+    if ImageSearch(&FoundX, &FoundY, X, Y, X + W, Y + H, imagePath) {
+        return true
+    } else {
+        return false
+    }
+}
+
+;Find first unit to place
+PlaceOrderSort() {
+    ; Count the number of enabled units
+    enabledUnits := 0
+    for i, unit in UnitData {
+        if (unit.Enabled.Value = 1) {
+            enabledUnits++
+        }
+    }
+
+    ; Only sort if more than one unit is enabled
+    if (enabledUnits > 1) {
+        Loop (2) {
+            for i, unit in UnitData {
+                ; Ensure we're not comparing the last element with a non-existent one
+                if (i < enabledUnits && UnitData[i].Wave.Value > UnitData[i + 1].Wave.Value) {
+                    Temp := UnitData[i]
+                    UnitData[i] := UnitData[i + 1]
+                    UnitData[i + 1] := Temp
+                }
+            }
+        }
+    }
+}
+
+
+
+global CurrentlyUpgrading := 0
+PlaceUnit(UnitNum) {
+    ;Checks for [Enabled, Wait, X, Y, Slot, Upgrade]
+    unit := UnitData[UnitNum]
+    x := unit.X.Value
+    y := unit.Y.Value
+    if(leafySpawn = 2) {
+        x := unit.Yleaf2.Value
+        y := unit.Yleaf2.Value
+    }
+    slot := unit.Slot.Value
+    waitTime := unit.Wait.Value
+    if(waitTime != "") {
+        waitTime := waitTime*1000 ;convert from S to MS
+    }
+
+    if(waitTime = "") {
+        Sleep(0)
+    } else {
+        Sleep(waitTime)
+    }
+    CoordMode("Mouse","Window")
+    MouseMove(x, y, 5) 
+    MouseRelativeMove()
+
+    Send "{" slot " down}"
+    Sleep(50)
+    Send "{" slot " up}"
+    Sleep(2500) ;Delay for ALS Lag
+    Click() ;Place unit down
+}
+
+MouseRelativeMove() {
+    MouseMove(1,1,5,"R")
+    MouseMove(-1,-1,5,"R")
+}
+
+getImagePath(i) {
+    if(selectRaid.Value = 1) {
+        wavePath := snowyWavePath
+    } else if(selectRaid.Value = 2) {
+        if(totemText.Value = 0) {
+            if(leafySpawn = 1) {
+                wavePath := leafWavePath1
+            } else if(leafySpawn= 2) {
+                wavePath := leafWavePath2
+            }
+        } else if(totemText.Value = 1) {
+            if(leafySpawn = 1) {
+                wavePath := leafWavePath1totem
+            } else if(leafySpawn = 2) {
+                wavePath := leafWavePath2totem
+            }
+        }
+    }
+    waveValue := UnitData[i].Wave.Value
+    imagePath := wavePath . WaveValue . ".png"
+    return ImagePath
+}
+
+global totalPlace := 0
+setupUnit(i) {
+    if(UnitData[i].Enabled.Value = 1) {
+        global totalPlace += 1
+        if(selectRaid.Value != 3) {
+            while !ImageSearchFunction(getImagePath(i)) {
+                Sleep(1000)
+                if nextCheck() {
+                    return
+                }
+            }
+        }
+        PlaceUnit(i)
+    } else {
+        return
+    }
+}
+
+nextCheck() {
+    if ImageSearchFunction(Retry) {
+        CoordMode("Mouse","Screen")
+        MouseMove(FoundX, FoundY, 5)
+        MouseRelativeMove()
+        Click()
+        Click()
+        global CurrentlyUpgrading := 0
+        global leafySpawn := 0
+        return true
+    } else if ImageSearchFunction(Reconnect) {
+        CoordMode("Mouse","Screen")
+        MouseMove(FoundX, FoundY, 5)
+        MouseRelativeMove()
+        Click()
+        Click()
+        if(CurrentlyUpgrading := 1) {
+            global CurrentlyUpgrading := 0 
+        }
+        global leafySpawn := 0
+        Sleep(10000) ;time to reconnect
+        MoveToRaid()
+        return true
+    }
+        else if ImageSearchFunction(step2perm) {
+        MoveToRaid()
+        return true
+    } 
+    return false
+}
+
+raidStartingWave() {
+    if(selectRaid.Value = 1) {
+        return snowyWave1
+    } else if(selectRaid.Value = 2) {
+        return leafWaveStart
+    }
+}
+
+findLeafySpawn() { ;1 AND 2 STARTING ARE TOO SIMILAR, NEED TO CHECK AFTER ZOOM
+    while (true) {
+        if(ImageSearchFunction(leafWave1)) {
+            global leafySpawn := 1 
+            return leafWave1
+        } else if(ImageSearchFunction(leafWave2)) {
+            global leafySpawn := 2
+            return leafWave2
+        }
+    }
+}
+
+findMainUpgrade() {
+    for i, unit in UnitData {
+        if unit.MainUpgrade.Value = 1 {
+            return i
+        }
+    }
+}
+
+setupMainUnit() {
+    unitIndex := findMainUpgrade()
+
+    ;get X and Y of unit
+    Xpos := UnitData[unitIndex].X.Value
+    Ypos := UnitData[unitIndex].Y.Value
+    CoordMode("Mouse","Window")
+    MouseMove(Xpos, Ypos, 5)
+    MouseRelativeMove()
+    Sleep(2500) ;Delay for ALS Lag
+    Click() ;Open Unit's Upgrade Menu
+    while !ImageSearchFunction(Upgrade) {
+        Sleep(1000)
+        if nextCheck() {
+            return
+        }
+    }
+    global CurrentlyUpgrading := 1
+    CoordMode("Mouse","Screen")
+    MouseMove(FoundX, FoundY, 5)
+    MouseRelativeMove()
+    while CurrentlyUpgrading = 1 {
+        Sleep(2500)
+        Click()
+        if nextCheck() {
+            return
+        }
+    }
+    ;upgrade menu
+}
+
+MoveToRaid() {
+    steps := []
+    global i := 1
+    variable := 1 ; Set this to 1 or 2 based on your requirement
+
+    loop 8 {
+        i += 1
+        if i = 6 {
+            ; Choose image based on the value of 'variable' for step 6
+            if (selectRaid.Value = 1) {
+                imagePath := raidMovePath . "6snowy.png" ; Use this image if variable is 1
+            } else if (selectRaid.Value = 2) {
+                imagePath := raidMovePath . "6leaf.png" ; Use this image if variable is 2
+            }
+        } else {
+            imagePath := raidMovePath . i . ".png"
+        }
+        steps.push(imagePath)
+    }
+
+    Sleep(5000) ; Delay for loading in
+
+    for index, currentStep in steps {
+        while !ImageSearchFunction(currentStep) {
+            Sleep(500)
+        }
+        CoordMode("Mouse", "Screen")
+        MouseMove(FoundX, FoundY, 1)
+        Sleep(50)
+        MouseRelativeMove()
+        Sleep(50)
+        Click()
+        Sleep(50)
+
+        if (index = 2) {
+            Send("{WheelDown}")
+            Sleep(1000)
+        } else if (index = 4) {
+            Sleep(1000)
+            Send("{Right down}")
+            Sleep(100)
+            Send("{Right up}")
+            Sleep(1000)
+            
+            loop {
+                Send("{W down}")
+                Sleep(3000)
+                if ImageSearchFunction(steps[5]) {
+                    break
+                }
+            }
+            Send("{W up}")
+        }
+    }
+}
+
+MainFunction() {
+    currentProcess.Value := "Running"
+    PlaceOrderSort() ;Sorts UnitData
+    if(ImageSearchFunction(step2perm)) {
+        MoveToRaid()
+    }
+    if(selectRaid.Value = 1 || selectRaid.Value = 2) {
+        while !ImageSearchFunction(raidStartingWave()) {
+            Sleep(1000)
+            if nextCheck() {
+                return
+            }
+        }
+    }
+    ;ONLY IF SNOWY
+
+
+    if(selectRaid.Value = 1) {
+        Send "{O down}"
+        Sleep(2000)
+        Send "{O up}"
+        Sleep(1000)
+    } else if(selectRaid.Value = 2) {
+        CoordMode("Mouse", "Window")
+        MouseMove(150,150,0)
+        Sleep(1000)
+        Send("{RButton down}")
+        Sleep(1000)
+        MouseMove(0, 11, 5, "R")
+        Sleep(1000)
+        Send("{RButton up}")
+        Sleep(1000)
+        Send "{O down}"
+        Sleep(2000)
+        Send "{O up}"
+        Sleep(1000)
+        findLeafySpawn()
+    }
+
+    setupUnit(1)
+    setupUnit(2)
+    setupUnit(3)
+    if(UnitData[1].MainUpgrade.Value = 1 || UnitData[2].MainUpgrade.Value = 1 || UnitData[3].MainUpgrade.Value = 1 ) {
+        setupMainUnit()
+    }
+    
+}
+
+checkAllConditions() {
+    errors := "" 
+    hasEnabledUnit := false  
+    total := UnitData[1].MainUpgrade.Value + UnitData[2].MainUpgrade.Value + UnitData[3].MainUpgrade.Value
+
+    for i, unit in UnitData {
+        if (unit.Enabled.Value = 1) {
+            hasEnabledUnit := true
+            if(selectRaid = "") {
+                errors .= "Please Select A Raid"
+            }
+            if (unit.Wave.Value = "") {
+                errors .= "`nUnit " i " is enabled but has no Wave set. Please set a Wave for this unit.`n"
+            }
+            else if (unit.Wave.Value > 20 || unit.Wave.Value < 1) {
+                errors .= "`nUnit " i " has a Wave greater than 20 or less than 1. Please disable this unit or lower the wave number.`n"
+            }
+            if (unit.X.Value = "" || unit.Y.Value = "") {
+                errors .= "`nUnit " i " is enabled but has no X/Y coordinates set. Please set X/Y for this unit.`n"
+            }
+            if (unit.Slot.Value = "") {
+                errors .= "`nUnit " i " is enabled but has no Slot set. Please set a Slot for this unit.`n"
+            } else if (unit.Slot.Value > 6) {
+                errors .= "`nUnit " i "  is enabled and has a Slot set, but needs to be a number 1-6`n"
+            }
+            if(total > 1) {
+                errors .= "You have more than one unit set as your Main Upgrade Unit. Please only select one."
+            } 
+            if(selectRaid.Value = 0) {
+                errors .="You have not selected a raid."
+            }
+        }
+    }
+    
+    if (!hasEnabledUnit) {
+        errors := "There are no enabled units. Please enable at least one unit.`n"
+    }
+    
+    if (errors != "") {
+        MsgBox(errors)
+        return false
+    }
+    
+    return true
+}
+
+MainLoop() {
+    ; Initial checks for UI information
+    if (checkAllConditions()) {
+        while true {
+            MainFunction()
+        }
+    }
+}
+
+;Controls
+$F1:: {
+    ;Start
+    MainLoop()
+}
+
+$F3:: {
+    ;Exit App
+    ExitApp
+}
+/*
+
+L:: {
+    CoordMode("Mouse", "Window")
+    MouseMove(150,150,0)
+    Sleep(1000)
+    Send("{RButton down}")
+    Sleep(1000)
+    MouseMove(0, 11, 5, "R")
+    Sleep(1000)
+    Send("{RButton up}")
+    ;can esc twice to make sure not stuck 
+}
+*/
+;HAVE TO ADD SPAWN2 IMAGES (rock side)
